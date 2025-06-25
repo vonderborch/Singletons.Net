@@ -15,6 +15,24 @@
     <File Path=".build\font\copperplate_gothic_bold.otf" />
     <File Path=".build\font\readme.html" />
   </Folder>
+  <Folder Name="/Docs/">
+    <File Path="Docs\index.md" />
+  </Folder>
+  <Folder Name="/Docs/Singletons/">
+    <File Path="Docs\Singletons\SingletonBase.md" />
+  </Folder>
+  <Folder Name="/Docs/Specialized/">
+    <File Path="Docs\Specialized\WeakSingleton.md" />
+    <File Path="Docs\Specialized\ThreadLocalSingleton.md" />
+    <File Path="Docs\Specialized\SingletonRegistry.md" />
+    <File Path="Docs\Specialized\ScopedSingleton.md" />
+    <File Path="Docs\Specialized\ResettableSingleton.md" />
+    <File Path="Docs\Specialized\ReadOnlySingleton.md" />
+    <File Path="Docs\Specialized\MultiInstanceSingleton.md" />
+    <File Path="Docs\Specialized\GenericSingleton.md" />
+    <File Path="Docs\Specialized\DisposableSingleton.md" />
+    <File Path="Docs\Specialized\AsyncSingleton.md" />
+  </Folder>
   <Folder Name="/SolutionFiles/">
     <File Path=".gitattributes" />
     <File Path=".gitignore" />
