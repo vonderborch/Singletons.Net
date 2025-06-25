@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net9.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <Version>1.0.0.0</Version>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <Title>Singletons.Net</Title>
+        <Authors>Christian Webber</Authors>
+        <Description>A library containing a variety of Singleton approaches that can be leveraged.</Description>
+        <Copyright>(c) 2025</Copyright>
+        <PackageProjectUrl>https://github.com/vonderborch/Singletons.Net</PackageProjectUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>logo.png</PackageIcon>
+        <RepositoryUrl>https://github.com/vonderborch/Singletons.Net</RepositoryUrl>
+        <PackageTags>Singleton</PackageTags>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <FileVersion>1.0.0.0</FileVersion>
+        <Company>Christian Webber</Company>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+      <OutputPath>..\..\debug\core</OutputPath>
+    </PropertyGroup>
+
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <OutputPath>..\..\release\core</OutputPath>
+      <DocumentationFile>..\..\release\core\Singletons.Net.xml</DocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\..\logo.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+            <Link>logo.png</Link>
+        </None>
+        <None Include="..\..\README.md">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+            <Link>README.md</Link>
+        </None>
+    </ItemGroup>
+
+    <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+        <Exec Command="Powershell Compress-Archive -Path '$(TargetDir)*' -DestinationPath '$(SolutionDir)release\$(ProjectName).zip' -Force" Condition="'$(ConfigurationName)' == 'Release' and '$(OS)' == 'Windows_NT'"/>
+        <Exec Command="pwsh -Command Compress-Archive -Path '$(TargetDir)*' -DestinationPath '$(SolutionDir)release\$(ProjectName).zip' -Force" Condition="'$(ConfigurationName)' == 'Release' and '$(OS)' != 'Windows_NT'"/>
+    </Target>
+</Project>
