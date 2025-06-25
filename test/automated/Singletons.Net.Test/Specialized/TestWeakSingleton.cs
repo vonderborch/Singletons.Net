@@ -1,5 +1,5 @@
-using System;
-using NUnit.Framework;
+using System.Collections.Concurrent;
+using System.Reflection;
 using Singletons.Net.Specialized;
 
 namespace Singletons.Net.Test.Specialized;
@@ -21,8 +21,8 @@ public class TestWeakSingleton
         WeakSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act
-        var instance1 = WeakSingleton<TestObject>.GetInstance();
-        var instance2 = WeakSingleton<TestObject>.GetInstance();
+        TestObject instance1 = WeakSingleton<TestObject>.GetInstance();
+        TestObject instance2 = WeakSingleton<TestObject>.GetInstance();
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -42,8 +42,8 @@ public class TestWeakSingleton
         };
 
         // Act
-        var instance1 = WeakSingleton<TestObject>.GetInstance(factory);
-        var instance2 = WeakSingleton<TestObject>.GetInstance(factory);
+        TestObject instance1 = WeakSingleton<TestObject>.GetInstance(factory);
+        TestObject instance2 = WeakSingleton<TestObject>.GetInstance(factory);
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -64,7 +64,7 @@ public class TestWeakSingleton
         };
 
         // Act
-        var instance = WeakSingleton<TestObject>.GetInstance(factory);
+        TestObject instance = WeakSingleton<TestObject>.GetInstance(factory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -83,30 +83,30 @@ public class TestWeakSingleton
             {
                 factoryCallCount++;
             }
+
             return new TestObject { Id = factoryCallCount, Name = $"Test-{factoryCallCount}" };
         };
 
-        var results = new System.Collections.Concurrent.ConcurrentBag<TestObject>();
+        ConcurrentBag<TestObject> results = new();
 
         // Act
-        System.Threading.Tasks.Parallel.For(0, 10, _ =>
-        {
-            results.Add(WeakSingleton<TestObject>.GetInstance(factory));
-        });
+        Parallel.For(0, 10, _ => { results.Add(WeakSingleton<TestObject>.GetInstance(factory)); });
 
         // Assert
-        var firstInstance = results.First();
+        TestObject firstInstance = results.First();
         Assert.That(firstInstance, Is.Not.Null);
         Assert.That(results.Count, Is.EqualTo(10));
-        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True, "All instances should be the same across threads");
-        Assert.That(factoryCallCount, Is.EqualTo(1), "Factory should be called exactly once even with concurrent access");
+        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True,
+            "All instances should be the same across threads");
+        Assert.That(factoryCallCount, Is.EqualTo(1),
+            "Factory should be called exactly once even with concurrent access");
     }
 
     [Test]
     public void WeakSingleton_GetInstance_ShouldThrowExceptionWhenNoFactoryProvided()
     {
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() =>
             WeakSingleton<TestObject>.GetInstance());
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
@@ -128,7 +128,7 @@ public class TestWeakSingleton
         };
 
         // Act
-        var instance = WeakSingleton<ComplexTestObject>.GetInstance(factory);
+        ComplexTestObject instance = WeakSingleton<ComplexTestObject>.GetInstance(factory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -145,7 +145,7 @@ public class TestWeakSingleton
         Func<TestObject> factory = () => throw new InvalidOperationException("Factory exception");
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() =>
             WeakSingleton<TestObject>.GetInstance(factory));
 
         Assert.That(exception.Message, Is.EqualTo("Factory exception"));
@@ -158,8 +158,8 @@ public class TestWeakSingleton
         WeakSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Default Test" };
 
         // Act
-        var instance1 = WeakSingleton<TestObject>.GetInstance();
-        var instance2 = WeakSingleton<TestObject>.GetInstance();
+        TestObject instance1 = WeakSingleton<TestObject>.GetInstance();
+        TestObject instance2 = WeakSingleton<TestObject>.GetInstance();
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -178,7 +178,7 @@ public class TestWeakSingleton
         Func<TestObject> providedFactory = () => new TestObject { Id = 2, Name = "Provided Test" };
 
         // Act
-        var instance = WeakSingleton<TestObject>.GetInstance(providedFactory);
+        TestObject instance = WeakSingleton<TestObject>.GetInstance(providedFactory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -190,7 +190,7 @@ public class TestWeakSingleton
     public void WeakSingleton_GetInstance_ShouldAllowGarbageCollection()
     {
         // Use a unique type to avoid static state pollution
-        var weakRef = CreateAndRelease();
+        WeakReference weakRef = CreateAndRelease();
 
         // Force multiple GC collections to ensure cleanup
         GC.Collect(2, GCCollectionMode.Forced, true);
@@ -201,10 +201,11 @@ public class TestWeakSingleton
         Assert.That(weakRef.IsAlive, Is.False, "Instance should be garbage collected when no strong references exist");
 
         // Additional verification - check that _weakInstance in the singleton was also collected
-        var field = typeof(WeakSingleton<UniqueTestObject>).GetField("_weakInstance",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        var weakInstanceField = field?.GetValue(null) as WeakReference<UniqueTestObject>;
-        Assert.That(weakInstanceField?.TryGetTarget(out _), Is.False, "Singleton's weak reference should not hold a target");
+        FieldInfo? field = typeof(WeakSingleton<UniqueTestObject>).GetField("_weakInstance",
+            BindingFlags.NonPublic | BindingFlags.Static);
+        WeakReference<UniqueTestObject>? weakInstanceField = field?.GetValue(null) as WeakReference<UniqueTestObject>;
+        Assert.That(weakInstanceField?.TryGetTarget(out _), Is.False,
+            "Singleton's weak reference should not hold a target");
 
         // Local function to create and release the instance
         static WeakReference CreateAndRelease()
@@ -212,7 +213,7 @@ public class TestWeakSingleton
             WeakSingleton<UniqueTestObject>.DefaultFactory = () => new UniqueTestObject();
             WeakReference weakRef;
             {
-                var instance = WeakSingleton<UniqueTestObject>.GetInstance();
+                UniqueTestObject instance = WeakSingleton<UniqueTestObject>.GetInstance();
                 weakRef = new WeakReference(instance);
                 Assert.That(weakRef.IsAlive, Is.True);
                 Assert.That(instance, Is.Not.Null);
@@ -241,8 +242,8 @@ public class TestWeakSingleton
         }
 
         // Clear the static _weakInstance field to break any lingering reference
-        var field = typeof(WeakSingleton<UniqueTestObject2>).GetField("_weakInstance",
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field = typeof(WeakSingleton<UniqueTestObject2>).GetField("_weakInstance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, null);
 
         GC.Collect(2, GCCollectionMode.Forced, true);
@@ -250,7 +251,7 @@ public class TestWeakSingleton
         GC.Collect(2, GCCollectionMode.Forced, true);
 
         // Get a new instance
-        var secondInstance = WeakSingleton<UniqueTestObject2>.GetInstance(factory);
+        UniqueTestObject2 secondInstance = WeakSingleton<UniqueTestObject2>.GetInstance(factory);
 
         Assert.That(secondInstance, Is.Not.Null, "Second instance should be created");
         Assert.That(secondInstance.Id, Is.EqualTo(2), "Factory should be called again");
@@ -265,7 +266,7 @@ public class TestWeakSingleton
         Func<TestObject>? factory = null;
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() =>
             WeakSingleton<TestObject>.GetInstance(factory));
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
@@ -278,7 +279,7 @@ public class TestWeakSingleton
         WeakSingleton<TestObject>.DefaultFactory = null;
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() =>
             WeakSingleton<TestObject>.GetInstance());
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
@@ -287,21 +288,21 @@ public class TestWeakSingleton
     private void ResetSingletonState()
     {
         // Use reflection to reset the private static field
-        var field = typeof(WeakSingleton<TestObject>).GetField("_weakInstance", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field = typeof(WeakSingleton<TestObject>).GetField("_weakInstance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, null);
 
-        var field2 = typeof(WeakSingleton<ComplexTestObject>).GetField("_weakInstance", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field2 = typeof(WeakSingleton<ComplexTestObject>).GetField("_weakInstance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field2?.SetValue(null, null);
 
         // Reset DefaultFactory
-        var defaultFactoryProperty = typeof(WeakSingleton<TestObject>).GetProperty("DefaultFactory", 
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        PropertyInfo? defaultFactoryProperty = typeof(WeakSingleton<TestObject>).GetProperty("DefaultFactory",
+            BindingFlags.Public | BindingFlags.Static);
         defaultFactoryProperty?.SetValue(null, null);
 
-        var defaultFactoryProperty2 = typeof(WeakSingleton<ComplexTestObject>).GetProperty("DefaultFactory", 
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        PropertyInfo? defaultFactoryProperty2 = typeof(WeakSingleton<ComplexTestObject>).GetProperty("DefaultFactory",
+            BindingFlags.Public | BindingFlags.Static);
         defaultFactoryProperty2?.SetValue(null, null);
     }
 
@@ -320,6 +321,12 @@ public class TestWeakSingleton
     }
 
     // Helper class for this test only
-    private class UniqueTestObject { }
-    private class UniqueTestObject2 { public int Id { get; set; } }
-} 
+    private class UniqueTestObject
+    {
+    }
+
+    private class UniqueTestObject2
+    {
+        public int Id { get; set; }
+    }
+}

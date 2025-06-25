@@ -1,4 +1,3 @@
-using NUnit.Framework;
 using Singletons.Net.Specialized;
 
 namespace Singletons.Net.Test.Specialized;
@@ -7,12 +6,15 @@ namespace Singletons.Net.Test.Specialized;
 public class TestSingletonRegistry
 {
     [SetUp]
-    public void Setup() => SingletonRegistry.Clear();
+    public void Setup()
+    {
+        SingletonRegistry.Clear();
+    }
 
     [Test]
     public void SingletonRegistry_ShouldRegisterAndGetInstance()
     {
-        var obj = new TestObject();
+        TestObject obj = new();
         SingletonRegistry.Register(obj);
         Assert.That(SingletonRegistry.Get<TestObject>(), Is.SameAs(obj));
     }
@@ -20,9 +22,9 @@ public class TestSingletonRegistry
     [Test]
     public void SingletonRegistry_TryGet_ShouldReturnTrueIfRegistered()
     {
-        var obj = new TestObject();
+        TestObject obj = new();
         SingletonRegistry.Register(obj);
-        var result = SingletonRegistry.TryGet<TestObject>(out var retrieved);
+        var result = SingletonRegistry.TryGet<TestObject>(out TestObject? retrieved);
         Assert.That(result, Is.True);
         Assert.That(retrieved, Is.SameAs(obj));
     }
@@ -30,7 +32,7 @@ public class TestSingletonRegistry
     [Test]
     public void SingletonRegistry_TryGet_ShouldReturnFalseIfNotRegistered()
     {
-        var result = SingletonRegistry.TryGet<TestObject>(out var retrieved);
+        var result = SingletonRegistry.TryGet<TestObject>(out TestObject? retrieved);
         Assert.That(result, Is.False);
         Assert.That(retrieved, Is.Null);
     }
@@ -38,7 +40,7 @@ public class TestSingletonRegistry
     [Test]
     public void SingletonRegistry_Remove_ShouldRemoveInstance()
     {
-        var obj = new TestObject();
+        TestObject obj = new();
         SingletonRegistry.Register(obj);
         SingletonRegistry.Remove<TestObject>();
         Assert.Throws<InvalidOperationException>(() => SingletonRegistry.Get<TestObject>());
@@ -54,6 +56,11 @@ public class TestSingletonRegistry
         Assert.Throws<InvalidOperationException>(() => SingletonRegistry.Get<AnotherObject>());
     }
 
-    public class TestObject { }
-    public class AnotherObject { }
-} 
+    public class TestObject
+    {
+    }
+
+    public class AnotherObject
+    {
+    }
+}

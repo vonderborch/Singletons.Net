@@ -1,6 +1,5 @@
-using System;
-using System.Threading.Tasks;
-using NUnit.Framework;
+using System.Collections.Concurrent;
+using System.Reflection;
 using Singletons.Net.Specialized;
 
 namespace Singletons.Net.Test.Specialized;
@@ -22,8 +21,8 @@ public class TestAsyncSingleton
         AsyncSingleton<TestObject>.DefaultFactory = () => Task.FromResult(new TestObject { Id = 1, Name = "Test" });
 
         // Act
-        var instance1 = await AsyncSingleton<TestObject>.GetInstanceAsync();
-        var instance2 = await AsyncSingleton<TestObject>.GetInstanceAsync();
+        TestObject instance1 = await AsyncSingleton<TestObject>.GetInstanceAsync();
+        TestObject instance2 = await AsyncSingleton<TestObject>.GetInstanceAsync();
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -44,8 +43,8 @@ public class TestAsyncSingleton
         };
 
         // Act
-        var instance1 = await AsyncSingleton<TestObject>.GetInstanceAsync(factory);
-        var instance2 = await AsyncSingleton<TestObject>.GetInstanceAsync(factory);
+        TestObject instance1 = await AsyncSingleton<TestObject>.GetInstanceAsync(factory);
+        TestObject instance2 = await AsyncSingleton<TestObject>.GetInstanceAsync(factory);
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -67,7 +66,7 @@ public class TestAsyncSingleton
         };
 
         // Act
-        var instance = await AsyncSingleton<TestObject>.GetInstanceAsync(factory);
+        TestObject instance = await AsyncSingleton<TestObject>.GetInstanceAsync(factory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -86,32 +85,35 @@ public class TestAsyncSingleton
             {
                 factoryCallCount++;
             }
+
             await Task.Delay(10);
             return new TestObject { Id = factoryCallCount, Name = $"Test-{factoryCallCount}" };
         };
 
-        var results = new System.Collections.Concurrent.ConcurrentBag<TestObject>();
+        ConcurrentBag<TestObject> results = new();
 
         // Act
         await Task.WhenAll(Enumerable.Range(0, 10).Select(async _ =>
         {
-            var instance = await AsyncSingleton<TestObject>.GetInstanceAsync(factory);
+            TestObject instance = await AsyncSingleton<TestObject>.GetInstanceAsync(factory);
             results.Add(instance);
         }));
 
         // Assert
-        var firstInstance = results.First();
+        TestObject firstInstance = results.First();
         Assert.That(firstInstance, Is.Not.Null);
         Assert.That(results.Count, Is.EqualTo(10));
-        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True, "All instances should be the same across threads");
-        Assert.That(factoryCallCount, Is.EqualTo(1), "Factory should be called exactly once even with concurrent access");
+        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True,
+            "All instances should be the same across threads");
+        Assert.That(factoryCallCount, Is.EqualTo(1),
+            "Factory should be called exactly once even with concurrent access");
     }
 
     [Test]
     public async Task AsyncSingleton_GetInstanceAsync_ShouldThrowExceptionWhenNoFactoryProvided()
     {
         // Act & Assert
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await AsyncSingleton<TestObject>.GetInstanceAsync());
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
@@ -128,7 +130,7 @@ public class TestAsyncSingleton
         };
 
         // Act & Assert
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await AsyncSingleton<TestObject>.GetInstanceAsync(factory));
 
         Assert.That(exception.Message, Is.EqualTo("Factory returned null instance"));
@@ -154,7 +156,7 @@ public class TestAsyncSingleton
         };
 
         // Act
-        var instance = await AsyncSingleton<ComplexTestObject>.GetInstanceAsync(factory);
+        ComplexTestObject instance = await AsyncSingleton<ComplexTestObject>.GetInstanceAsync(factory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -175,7 +177,7 @@ public class TestAsyncSingleton
         };
 
         // Act & Assert
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
             await AsyncSingleton<TestObject>.GetInstanceAsync(factory));
 
         Assert.That(exception.Message, Is.EqualTo("Factory exception"));
@@ -194,13 +196,13 @@ public class TestAsyncSingleton
         };
 
         // Act
-        var tasks = Enumerable.Range(0, 5).Select(async _ =>
+        Task<TestObject>[] tasks = Enumerable.Range(0, 5).Select(async _ =>
             await AsyncSingleton<TestObject>.GetInstanceAsync(factory)).ToArray();
 
-        var instances = await Task.WhenAll(tasks);
+        TestObject[] instances = await Task.WhenAll(tasks);
 
         // Assert
-        var firstInstance = instances.First();
+        TestObject firstInstance = instances.First();
         Assert.That(instances.All(x => ReferenceEquals(x, firstInstance)), Is.True, "All instances should be the same");
         Assert.That(factoryCallCount, Is.EqualTo(1), "Factory should be called exactly once");
     }
@@ -209,11 +211,12 @@ public class TestAsyncSingleton
     public async Task AsyncSingleton_GetInstanceAsync_ShouldWorkWithDefaultFactory()
     {
         // Arrange
-        AsyncSingleton<TestObject>.DefaultFactory = () => Task.FromResult(new TestObject { Id = 1, Name = "Default Test" });
+        AsyncSingleton<TestObject>.DefaultFactory =
+            () => Task.FromResult(new TestObject { Id = 1, Name = "Default Test" });
 
         // Act
-        var instance1 = await AsyncSingleton<TestObject>.GetInstanceAsync();
-        var instance2 = await AsyncSingleton<TestObject>.GetInstanceAsync();
+        TestObject instance1 = await AsyncSingleton<TestObject>.GetInstanceAsync();
+        TestObject instance2 = await AsyncSingleton<TestObject>.GetInstanceAsync();
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -227,7 +230,8 @@ public class TestAsyncSingleton
     public async Task AsyncSingleton_GetInstanceAsync_ShouldPreferProvidedFactoryOverDefaultFactory()
     {
         // Arrange
-        AsyncSingleton<TestObject>.DefaultFactory = () => Task.FromResult(new TestObject { Id = 1, Name = "Default Test" });
+        AsyncSingleton<TestObject>.DefaultFactory =
+            () => Task.FromResult(new TestObject { Id = 1, Name = "Default Test" });
 
         Func<Task<TestObject>> providedFactory = async () =>
         {
@@ -236,7 +240,7 @@ public class TestAsyncSingleton
         };
 
         // Act
-        var instance = await AsyncSingleton<TestObject>.GetInstanceAsync(providedFactory);
+        TestObject instance = await AsyncSingleton<TestObject>.GetInstanceAsync(providedFactory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -247,21 +251,21 @@ public class TestAsyncSingleton
     private void ResetSingletonState()
     {
         // Use reflection to reset the private static field
-        var field = typeof(AsyncSingleton<TestObject>).GetField("_instance", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field = typeof(AsyncSingleton<TestObject>).GetField("_instance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, null);
 
-        var field2 = typeof(AsyncSingleton<ComplexTestObject>).GetField("_instance", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field2 = typeof(AsyncSingleton<ComplexTestObject>).GetField("_instance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field2?.SetValue(null, null);
 
         // Reset DefaultFactory
-        var defaultFactoryProperty = typeof(AsyncSingleton<TestObject>).GetProperty("DefaultFactory", 
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        PropertyInfo? defaultFactoryProperty = typeof(AsyncSingleton<TestObject>).GetProperty("DefaultFactory",
+            BindingFlags.Public | BindingFlags.Static);
         defaultFactoryProperty?.SetValue(null, null);
 
-        var defaultFactoryProperty2 = typeof(AsyncSingleton<ComplexTestObject>).GetProperty("DefaultFactory", 
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        PropertyInfo? defaultFactoryProperty2 = typeof(AsyncSingleton<ComplexTestObject>).GetProperty("DefaultFactory",
+            BindingFlags.Public | BindingFlags.Static);
         defaultFactoryProperty2?.SetValue(null, null);
     }
 
@@ -278,4 +282,4 @@ public class TestAsyncSingleton
         public string Name { get; set; } = string.Empty;
         public Dictionary<string, object> Properties { get; set; } = new();
     }
-} 
+}

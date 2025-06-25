@@ -1,4 +1,4 @@
-using NUnit.Framework;
+using System.Reflection;
 using Singletons.Net.Specialized;
 
 namespace Singletons.Net.Test.Specialized;
@@ -10,9 +10,11 @@ public class TestReadOnlySingleton
     public void Setup()
     {
         // Reset static state via reflection
-        var field = typeof(ReadOnlySingleton<TestObject>).GetField("_instance", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field =
+            typeof(ReadOnlySingleton<TestObject>).GetField("_instance", BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, null);
-        var isSetField = typeof(ReadOnlySingleton<TestObject>).GetField("_isSet", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? isSetField =
+            typeof(ReadOnlySingleton<TestObject>).GetField("_isSet", BindingFlags.NonPublic | BindingFlags.Static);
         isSetField?.SetValue(null, false);
     }
 
@@ -20,12 +22,16 @@ public class TestReadOnlySingleton
     public void ReadOnlySingleton_ShouldAllowSetInstanceOnce()
     {
         // Reset static state via reflection
-        var field = typeof(ReadOnlySingleton<UniqueTestObject>).GetField("_instance", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field =
+            typeof(ReadOnlySingleton<UniqueTestObject>).GetField("_instance",
+                BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, null);
-        var isSetField = typeof(ReadOnlySingleton<UniqueTestObject>).GetField("_isSet", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? isSetField =
+            typeof(ReadOnlySingleton<UniqueTestObject>).GetField("_isSet",
+                BindingFlags.NonPublic | BindingFlags.Static);
         isSetField?.SetValue(null, false);
 
-        var custom = new UniqueTestObject { Value = 42 };
+        UniqueTestObject custom = new() { Value = 42 };
         ReadOnlySingleton<UniqueTestObject>.SetInstance(custom);
         Assert.That(ReadOnlySingleton<UniqueTestObject>.Instance, Is.SameAs(custom));
     }
@@ -33,19 +39,25 @@ public class TestReadOnlySingleton
     [Test]
     public void ReadOnlySingleton_ShouldReturnSameInstance()
     {
-        var instance1 = ReadOnlySingleton<TestObject>.Instance;
-        var instance2 = ReadOnlySingleton<TestObject>.Instance;
+        TestObject instance1 = ReadOnlySingleton<TestObject>.Instance;
+        TestObject instance2 = ReadOnlySingleton<TestObject>.Instance;
         Assert.That(instance1, Is.SameAs(instance2));
     }
 
     [Test]
     public void ReadOnlySingleton_SetInstance_ShouldThrowIfAlreadySetOrAccessed()
     {
-        var _ = ReadOnlySingleton<TestObject>.Instance;
+        TestObject _ = ReadOnlySingleton<TestObject>.Instance;
         Assert.Throws<InvalidOperationException>(() => ReadOnlySingleton<TestObject>.SetInstance(new TestObject()));
     }
 
-    private class UniqueTestObject { public int Value { get; set; } }
+    private class UniqueTestObject
+    {
+        public int Value { get; set; }
+    }
 
-    public class TestObject { public int Value { get; set; } }
-} 
+    public class TestObject
+    {
+        public int Value { get; set; }
+    }
+}

@@ -1,6 +1,5 @@
-using System;
-using System.Threading.Tasks;
-using NUnit.Framework;
+using System.Collections.Concurrent;
+using System.Reflection;
 using Singletons.Net.Specialized;
 
 namespace Singletons.Net.Test.Specialized;
@@ -8,19 +7,19 @@ namespace Singletons.Net.Test.Specialized;
 [TestFixture]
 public class TestScopedSingleton
 {
-    private ScopedSingleton<TestObject> _scopedSingleton = null!;
-    private ScopedSingleton<ComplexTestObject> _complexScopedSingleton = null!;
-
     [SetUp]
     public void Setup()
     {
         // Create new instances for each test to ensure clean state
-        _scopedSingleton = new ScopedSingleton<TestObject>();
-        _complexScopedSingleton = new ScopedSingleton<ComplexTestObject>();
-        
+        this._scopedSingleton = new ScopedSingleton<TestObject>();
+        this._complexScopedSingleton = new ScopedSingleton<ComplexTestObject>();
+
         // Reset any static state between tests
         ResetSingletonState();
     }
+
+    private ScopedSingleton<TestObject> _scopedSingleton = null!;
+    private ScopedSingleton<ComplexTestObject> _complexScopedSingleton = null!;
 
     [Test]
     public void ScopedSingleton_GetInstance_ShouldReturnSameInstanceForSameScope()
@@ -29,8 +28,8 @@ public class TestScopedSingleton
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act
-        var instance1 = _scopedSingleton.GetInstance("scope1");
-        var instance2 = _scopedSingleton.GetInstance("scope1");
+        TestObject instance1 = this._scopedSingleton.GetInstance("scope1");
+        TestObject instance2 = this._scopedSingleton.GetInstance("scope1");
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -45,8 +44,8 @@ public class TestScopedSingleton
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act
-        var instance1 = _scopedSingleton.GetInstance("scope1");
-        var instance2 = _scopedSingleton.GetInstance("scope2");
+        TestObject instance1 = this._scopedSingleton.GetInstance("scope1");
+        TestObject instance2 = this._scopedSingleton.GetInstance("scope2");
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -66,8 +65,8 @@ public class TestScopedSingleton
         };
 
         // Act
-        var instance1 = _scopedSingleton.GetInstance("scope1", factory);
-        var instance2 = _scopedSingleton.GetInstance("scope1", factory);
+        TestObject instance1 = this._scopedSingleton.GetInstance("scope1", factory);
+        TestObject instance2 = this._scopedSingleton.GetInstance("scope1", factory);
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -88,7 +87,7 @@ public class TestScopedSingleton
         };
 
         // Act
-        var instance = _scopedSingleton.GetInstance("scope1", factory);
+        TestObject instance = this._scopedSingleton.GetInstance("scope1", factory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -107,31 +106,31 @@ public class TestScopedSingleton
             {
                 factoryCallCount++;
             }
+
             return new TestObject { Id = factoryCallCount, Name = $"Test-{factoryCallCount}" };
         };
 
-        var results = new System.Collections.Concurrent.ConcurrentBag<TestObject>();
+        ConcurrentBag<TestObject> results = new();
 
         // Act
-        System.Threading.Tasks.Parallel.For(0, 10, _ =>
-        {
-            results.Add(_scopedSingleton.GetInstance("scope1", factory));
-        });
+        Parallel.For(0, 10, _ => { results.Add(this._scopedSingleton.GetInstance("scope1", factory)); });
 
         // Assert
-        var firstInstance = results.First();
+        TestObject firstInstance = results.First();
         Assert.That(firstInstance, Is.Not.Null);
         Assert.That(results.Count, Is.EqualTo(10));
-        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True, "All instances should be the same across threads");
-        Assert.That(factoryCallCount, Is.EqualTo(1), "Factory should be called exactly once even with concurrent access");
+        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True,
+            "All instances should be the same across threads");
+        Assert.That(factoryCallCount, Is.EqualTo(1),
+            "Factory should be called exactly once even with concurrent access");
     }
 
     [Test]
     public void ScopedSingleton_GetInstance_ShouldThrowExceptionWhenNoFactoryProvided()
     {
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            _scopedSingleton.GetInstance("scope1"));
+        InvalidOperationException? exception =
+            Assert.Throws<InvalidOperationException>(() => this._scopedSingleton.GetInstance("scope1"));
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
     }
@@ -152,7 +151,7 @@ public class TestScopedSingleton
         };
 
         // Act
-        var instance = _complexScopedSingleton.GetInstance("scope1", factory);
+        ComplexTestObject instance = this._complexScopedSingleton.GetInstance("scope1", factory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -169,8 +168,8 @@ public class TestScopedSingleton
         Func<TestObject> factory = () => throw new InvalidOperationException("Factory exception");
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            _scopedSingleton.GetInstance("scope1", factory));
+        InvalidOperationException? exception =
+            Assert.Throws<InvalidOperationException>(() => this._scopedSingleton.GetInstance("scope1", factory));
 
         Assert.That(exception.Message, Is.EqualTo("Factory exception"));
     }
@@ -182,8 +181,8 @@ public class TestScopedSingleton
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Default Test" };
 
         // Act
-        var instance1 = _scopedSingleton.GetInstance("scope1");
-        var instance2 = _scopedSingleton.GetInstance("scope1");
+        TestObject instance1 = this._scopedSingleton.GetInstance("scope1");
+        TestObject instance2 = this._scopedSingleton.GetInstance("scope1");
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -202,7 +201,7 @@ public class TestScopedSingleton
         Func<TestObject> providedFactory = () => new TestObject { Id = 2, Name = "Provided Test" };
 
         // Act
-        var instance = _scopedSingleton.GetInstance("scope1", providedFactory);
+        TestObject instance = this._scopedSingleton.GetInstance("scope1", providedFactory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -215,11 +214,11 @@ public class TestScopedSingleton
     {
         // Arrange
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
-        var instance1 = _scopedSingleton.GetInstance("scope1");
+        TestObject instance1 = this._scopedSingleton.GetInstance("scope1");
 
         // Act
-        var removed = _scopedSingleton.RemoveInstance("scope1");
-        var instance2 = _scopedSingleton.GetInstance("scope1");
+        var removed = this._scopedSingleton.RemoveInstance("scope1");
+        TestObject instance2 = this._scopedSingleton.GetInstance("scope1");
 
         // Assert
         Assert.That(removed, Is.True, "Instance should be successfully removed");
@@ -233,13 +232,13 @@ public class TestScopedSingleton
     {
         // Arrange
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
-        var instance1 = _scopedSingleton.GetInstance("scope1");
-        var instance2 = _scopedSingleton.GetInstance("scope2");
+        TestObject instance1 = this._scopedSingleton.GetInstance("scope1");
+        TestObject instance2 = this._scopedSingleton.GetInstance("scope2");
 
         // Act
-        var removed = _scopedSingleton.RemoveInstance("scope1");
-        var instance1AfterRemoval = _scopedSingleton.GetInstance("scope1");
-        var instance2AfterRemoval = _scopedSingleton.GetInstance("scope2");
+        var removed = this._scopedSingleton.RemoveInstance("scope1");
+        TestObject instance1AfterRemoval = this._scopedSingleton.GetInstance("scope1");
+        TestObject instance2AfterRemoval = this._scopedSingleton.GetInstance("scope2");
 
         // Assert
         Assert.That(removed, Is.True, "Instance should be successfully removed");
@@ -254,9 +253,9 @@ public class TestScopedSingleton
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act
-        var hasInstanceBefore = _scopedSingleton.HasInstance("scope1");
-        var instance = _scopedSingleton.GetInstance("scope1");
-        var hasInstanceAfter = _scopedSingleton.HasInstance("scope1");
+        var hasInstanceBefore = this._scopedSingleton.HasInstance("scope1");
+        TestObject instance = this._scopedSingleton.GetInstance("scope1");
+        var hasInstanceAfter = this._scopedSingleton.HasInstance("scope1");
 
         // Assert
         Assert.That(hasInstanceBefore, Is.False, "Should not have instance before creation");
@@ -268,7 +267,7 @@ public class TestScopedSingleton
     public void ScopedSingleton_HasInstance_ShouldReturnFalseWhenInstanceDoesNotExist()
     {
         // Act
-        var hasInstance = _scopedSingleton.HasInstance("scope1");
+        var hasInstance = this._scopedSingleton.HasInstance("scope1");
 
         // Assert
         Assert.That(hasInstance, Is.False, "Should not have instance when none exists");
@@ -279,13 +278,13 @@ public class TestScopedSingleton
     {
         // Arrange
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
-        var instance1 = _scopedSingleton.GetInstance("scope1");
-        var instance2 = _scopedSingleton.GetInstance("scope2");
+        TestObject instance1 = this._scopedSingleton.GetInstance("scope1");
+        TestObject instance2 = this._scopedSingleton.GetInstance("scope2");
 
         // Act
-        _scopedSingleton.ClearAllInstances();
-        var hasInstance1 = _scopedSingleton.HasInstance("scope1");
-        var hasInstance2 = _scopedSingleton.HasInstance("scope2");
+        this._scopedSingleton.ClearAllInstances();
+        var hasInstance1 = this._scopedSingleton.HasInstance("scope1");
+        var hasInstance2 = this._scopedSingleton.HasInstance("scope2");
 
         // Assert
         Assert.That(hasInstance1, Is.False, "Instance for scope1 should be removed");
@@ -299,8 +298,8 @@ public class TestScopedSingleton
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act
-        var instance1 = await _scopedSingleton.GetInstanceAsync("scope1");
-        var instance2 = await _scopedSingleton.GetInstanceAsync("scope1");
+        TestObject instance1 = await this._scopedSingleton.GetInstanceAsync("scope1");
+        TestObject instance2 = await this._scopedSingleton.GetInstanceAsync("scope1");
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -321,8 +320,8 @@ public class TestScopedSingleton
         };
 
         // Act
-        var instance1 = await _scopedSingleton.GetInstanceAsync("scope1", factory);
-        var instance2 = await _scopedSingleton.GetInstanceAsync("scope1", factory);
+        TestObject instance1 = await this._scopedSingleton.GetInstanceAsync("scope1", factory);
+        TestObject instance2 = await this._scopedSingleton.GetInstanceAsync("scope1", factory);
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -343,33 +342,36 @@ public class TestScopedSingleton
             {
                 factoryCallCount++;
             }
+
             await Task.Delay(10);
             return new TestObject { Id = factoryCallCount, Name = $"Test-{factoryCallCount}" };
         };
 
-        var results = new System.Collections.Concurrent.ConcurrentBag<TestObject>();
+        ConcurrentBag<TestObject> results = new();
 
         // Act
         await Task.WhenAll(Enumerable.Range(0, 10).Select(async _ =>
         {
-            var instance = await _scopedSingleton.GetInstanceAsync("scope1", factory);
+            TestObject instance = await this._scopedSingleton.GetInstanceAsync("scope1", factory);
             results.Add(instance);
         }));
 
         // Assert
-        var firstInstance = results.First();
+        TestObject firstInstance = results.First();
         Assert.That(firstInstance, Is.Not.Null);
         Assert.That(results.Count, Is.EqualTo(10));
-        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True, "All instances should be the same across threads");
-        Assert.That(factoryCallCount, Is.EqualTo(1), "Factory should be called exactly once even with concurrent access");
+        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True,
+            "All instances should be the same across threads");
+        Assert.That(factoryCallCount, Is.EqualTo(1),
+            "Factory should be called exactly once even with concurrent access");
     }
 
     [Test]
     public async Task ScopedSingleton_GetInstanceAsync_ShouldThrowExceptionWhenNoFactoryProvided()
     {
         // Act & Assert
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _scopedSingleton.GetInstanceAsync("scope1"));
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await this._scopedSingleton.GetInstanceAsync("scope1"));
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
     }
@@ -385,8 +387,8 @@ public class TestScopedSingleton
         };
 
         // Act & Assert
-        var exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
-            await _scopedSingleton.GetInstanceAsync("scope1", factory));
+        InvalidOperationException? exception = Assert.ThrowsAsync<InvalidOperationException>(async () =>
+            await this._scopedSingleton.GetInstanceAsync("scope1", factory));
 
         Assert.That(exception.Message, Is.EqualTo("Factory exception"));
     }
@@ -396,13 +398,13 @@ public class TestScopedSingleton
     {
         // Arrange
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
-        var instance1 = await _scopedSingleton.GetInstanceAsync("scope1");
-        var instance2 = await _scopedSingleton.GetInstanceAsync("scope2");
+        TestObject instance1 = await this._scopedSingleton.GetInstanceAsync("scope1");
+        TestObject instance2 = await this._scopedSingleton.GetInstanceAsync("scope2");
 
         // Act
-        await _scopedSingleton.ClearAllInstancesAsync();
-        var hasInstance1 = _scopedSingleton.HasInstance("scope1");
-        var hasInstance2 = _scopedSingleton.HasInstance("scope2");
+        await this._scopedSingleton.ClearAllInstancesAsync();
+        var hasInstance1 = this._scopedSingleton.HasInstance("scope1");
+        var hasInstance2 = this._scopedSingleton.HasInstance("scope2");
 
         // Assert
         Assert.That(hasInstance1, Is.False, "Instance for scope1 should be removed");
@@ -416,7 +418,7 @@ public class TestScopedSingleton
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act/Assert
-        Assert.Throws<ArgumentNullException>(() => _scopedSingleton.GetInstance(null!));
+        Assert.Throws<ArgumentNullException>(() => this._scopedSingleton.GetInstance(null!));
     }
 
     [Test]
@@ -425,15 +427,15 @@ public class TestScopedSingleton
         // Arrange
         ScopedSingleton<TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
-        var scopeKey1 = new ComplexScopeKey { Id = 1, Name = "Scope1" };
-        var scopeKey2 = new ComplexScopeKey { Id = 2, Name = "Scope2" };
+        ComplexScopeKey scopeKey1 = new() { Id = 1, Name = "Scope1" };
+        ComplexScopeKey scopeKey2 = new() { Id = 2, Name = "Scope2" };
 
         // Act
-        var instance1 = _scopedSingleton.GetInstance(scopeKey1);
-        var instance2 = _scopedSingleton.GetInstance(scopeKey2);
+        TestObject instance1 = this._scopedSingleton.GetInstance(scopeKey1);
+        TestObject instance2 = this._scopedSingleton.GetInstance(scopeKey2);
         instance2.Id = 2;
         instance2.Name = "Test2";
-        var instance3 = _scopedSingleton.GetInstance(scopeKey1);
+        TestObject instance3 = this._scopedSingleton.GetInstance(scopeKey1);
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -450,8 +452,8 @@ public class TestScopedSingleton
         Func<TestObject>? factory = null;
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            _scopedSingleton.GetInstance("scope1", factory));
+        InvalidOperationException? exception =
+            Assert.Throws<InvalidOperationException>(() => this._scopedSingleton.GetInstance("scope1", factory));
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
     }
@@ -463,8 +465,8 @@ public class TestScopedSingleton
         ScopedSingleton<TestObject>.DefaultFactory = null;
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
-            _scopedSingleton.GetInstance("scope1"));
+        InvalidOperationException? exception =
+            Assert.Throws<InvalidOperationException>(() => this._scopedSingleton.GetInstance("scope1"));
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
     }
@@ -472,12 +474,12 @@ public class TestScopedSingleton
     private void ResetSingletonState()
     {
         // Reset DefaultFactory
-        var defaultFactoryProperty = typeof(ScopedSingleton<TestObject>).GetProperty("DefaultFactory", 
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        PropertyInfo? defaultFactoryProperty = typeof(ScopedSingleton<TestObject>).GetProperty("DefaultFactory",
+            BindingFlags.Public | BindingFlags.Static);
         defaultFactoryProperty?.SetValue(null, null);
 
-        var defaultFactoryProperty2 = typeof(ScopedSingleton<ComplexTestObject>).GetProperty("DefaultFactory", 
-            System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+        PropertyInfo? defaultFactoryProperty2 = typeof(ScopedSingleton<ComplexTestObject>).GetProperty("DefaultFactory",
+            BindingFlags.Public | BindingFlags.Static);
         defaultFactoryProperty2?.SetValue(null, null);
     }
 
@@ -500,4 +502,4 @@ public class TestScopedSingleton
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
     }
-} 
+}

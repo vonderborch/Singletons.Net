@@ -1,7 +1,5 @@
-using System;
-using System.Threading.Tasks;
-using NUnit.Framework;
-
+using System.Collections.Concurrent;
+using System.Reflection;
 using Singletons.Net.Specialized;
 
 namespace Singletons.Net.Test.Specialized;
@@ -20,10 +18,10 @@ public class TestGenericSingleton
     public void Singleton_FromInstance_ShouldCreateSingletonWithProvidedInstance()
     {
         // Arrange
-        var testObject = new TestObject { Id = 1, Name = "Test" };
+        TestObject testObject = new() { Id = 1, Name = "Test" };
 
         // Act
-        var singleton = GenericSingleton<TestObject>.FromInstance(testObject);
+        GenericSingleton<TestObject> singleton = GenericSingleton<TestObject>.FromInstance(testObject);
 
         // Assert
         Assert.That(singleton, Is.Not.Null);
@@ -41,12 +39,12 @@ public class TestGenericSingleton
     public void Singleton_FromInstance_ShouldThrowExceptionWhenAlreadyInitialized()
     {
         // Arrange
-        var testObject1 = new TestObject { Id = 1, Name = "Test1" };
-        var testObject2 = new TestObject { Id = 2, Name = "Test2" };
+        TestObject testObject1 = new() { Id = 1, Name = "Test1" };
+        TestObject testObject2 = new() { Id = 2, Name = "Test2" };
         GenericSingleton<TestObject>.FromInstance(testObject1);
 
         // Act & Assert
-        Assert.That(() => GenericSingleton<TestObject>.FromInstance(testObject2), 
+        Assert.That(() => GenericSingleton<TestObject>.FromInstance(testObject2),
             Throws.InvalidOperationException.With.Message.Contains("already set"));
     }
 
@@ -54,12 +52,12 @@ public class TestGenericSingleton
     public void Singleton_FromInstance_WithOverwrite_ShouldAllowOverwriting()
     {
         // Arrange
-        var testObject1 = new TestObject { Id = 1, Name = "Test1" };
-        var testObject2 = new TestObject { Id = 2, Name = "Test2" };
+        TestObject testObject1 = new() { Id = 1, Name = "Test1" };
+        TestObject testObject2 = new() { Id = 2, Name = "Test2" };
         GenericSingleton<TestObject>.FromInstance(testObject1);
 
         // Act
-        var singleton = GenericSingleton<TestObject>.FromInstance(testObject2, overwrite: true);
+        GenericSingleton<TestObject> singleton = GenericSingleton<TestObject>.FromInstance(testObject2, true);
 
         // Assert
         Assert.That(singleton, Is.Not.Null);
@@ -70,11 +68,11 @@ public class TestGenericSingleton
     public void Singleton_Instance_Get_ShouldReturnSetInstance()
     {
         // Arrange
-        var testObject = new TestObject { Id = 1, Name = "Test" };
+        TestObject testObject = new() { Id = 1, Name = "Test" };
         GenericSingleton<TestObject>.Instance = testObject;
 
         // Act
-        var retrievedInstance = GenericSingleton<TestObject>.Instance;
+        TestObject retrievedInstance = GenericSingleton<TestObject>.Instance;
 
         // Assert
         Assert.That(retrievedInstance, Is.SameAs(testObject));
@@ -84,7 +82,7 @@ public class TestGenericSingleton
     public void Singleton_Instance_Get_ShouldThrowExceptionWhenNotInitialized()
     {
         // Arrange & Act & Assert
-        Assert.That(() => GenericSingleton<TestObject>.Instance, 
+        Assert.That(() => GenericSingleton<TestObject>.Instance,
             Throws.InvalidOperationException.With.Message.Contains("not set"));
     }
 
@@ -92,7 +90,7 @@ public class TestGenericSingleton
     public void Singleton_Instance_Set_ShouldSetInstance()
     {
         // Arrange
-        var testObject = new TestObject { Id = 1, Name = "Test" };
+        TestObject testObject = new() { Id = 1, Name = "Test" };
 
         // Act
         GenericSingleton<TestObject>.Instance = testObject;
@@ -105,12 +103,12 @@ public class TestGenericSingleton
     public void Singleton_Instance_Set_ShouldThrowExceptionWhenAlreadySet()
     {
         // Arrange
-        var testObject1 = new TestObject { Id = 1, Name = "Test1" };
-        var testObject2 = new TestObject { Id = 2, Name = "Test2" };
+        TestObject testObject1 = new() { Id = 1, Name = "Test1" };
+        TestObject testObject2 = new() { Id = 2, Name = "Test2" };
         GenericSingleton<TestObject>.Instance = testObject1;
 
         // Act & Assert
-        Assert.That(() => GenericSingleton<TestObject>.Instance = testObject2, 
+        Assert.That(() => GenericSingleton<TestObject>.Instance = testObject2,
             Throws.InvalidOperationException.With.Message.Contains("already set"));
     }
 
@@ -118,29 +116,27 @@ public class TestGenericSingleton
     public void Singleton_ThreadSafety_ShouldHandleConcurrentAccess()
     {
         // Arrange
-        var testObject = new TestObject { Id = 1, Name = "Test" };
-        var results = new System.Collections.Concurrent.ConcurrentBag<TestObject>();
+        TestObject testObject = new() { Id = 1, Name = "Test" };
+        ConcurrentBag<TestObject> results = new();
 
         // Act
         GenericSingleton<TestObject>.Instance = testObject;
-        Parallel.For(0, 10, _ =>
-        {
-            results.Add(GenericSingleton<TestObject>.Instance);
-        });
+        Parallel.For(0, 10, _ => { results.Add(GenericSingleton<TestObject>.Instance); });
 
         // Assert
-        var firstInstance = results.First();
+        TestObject firstInstance = results.First();
         Assert.That(firstInstance, Is.Not.Null);
         Assert.That(results.Count, Is.EqualTo(10), "Should have collected 10 instances");
-        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True, "All instances should be the same across threads");
+        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True,
+            "All instances should be the same across threads");
     }
 
     [Test]
     public void Singleton_DifferentTypes_ShouldHaveSeparateInstances()
     {
         // Arrange
-        var testObject1 = new TestObject { Id = 1, Name = "Test1" };
-        var testObject2 = new TestObject2 { Id = 2, Name = "Test2" };
+        TestObject testObject1 = new() { Id = 1, Name = "Test1" };
+        TestObject2 testObject2 = new() { Id = 2, Name = "Test2" };
 
         // Act
         GenericSingleton<TestObject>.Instance = testObject1;
@@ -149,15 +145,17 @@ public class TestGenericSingleton
         // Assert
         Assert.That(GenericSingleton<TestObject>.Instance, Is.SameAs(testObject1));
         Assert.That(GenericSingleton<TestObject2>.Instance, Is.SameAs(testObject2));
-        Assert.That(GenericSingleton<TestObject>.Instance.GetType(), Is.Not.EqualTo(GenericSingleton<TestObject2>.Instance.GetType()));
-        Assert.That(ReferenceEquals(GenericSingleton<TestObject>.Instance, GenericSingleton<TestObject2>.Instance), Is.False);
+        Assert.That(GenericSingleton<TestObject>.Instance.GetType(),
+            Is.Not.EqualTo(GenericSingleton<TestObject2>.Instance.GetType()));
+        Assert.That(ReferenceEquals(GenericSingleton<TestObject>.Instance, GenericSingleton<TestObject2>.Instance),
+            Is.False);
     }
 
     [Test]
     public void Singleton_ComplexObject_ShouldWorkWithComplexTypes()
     {
         // Arrange
-        var complexObject = new ComplexTestObject
+        ComplexTestObject complexObject = new()
         {
             Id = 1,
             Name = "Complex Test",
@@ -170,7 +168,7 @@ public class TestGenericSingleton
 
         // Act
         GenericSingleton<ComplexTestObject>.Instance = complexObject;
-        var retrievedInstance = GenericSingleton<ComplexTestObject>.Instance;
+        ComplexTestObject retrievedInstance = GenericSingleton<ComplexTestObject>.Instance;
 
         // Assert
         Assert.That(retrievedInstance, Is.SameAs(complexObject));
@@ -182,19 +180,19 @@ public class TestGenericSingleton
     public void Singleton_ResetAndReinitialize_ShouldWorkCorrectly()
     {
         // Arrange
-        var testObject1 = new TestObject { Id = 1, Name = "Test1" };
-        var testObject2 = new TestObject { Id = 2, Name = "Test2" };
+        TestObject testObject1 = new() { Id = 1, Name = "Test1" };
+        TestObject testObject2 = new() { Id = 2, Name = "Test2" };
 
         // Act - First initialization
         GenericSingleton<TestObject>.Instance = testObject1;
-        var firstInstance = GenericSingleton<TestObject>.Instance;
+        TestObject firstInstance = GenericSingleton<TestObject>.Instance;
 
         // Reset state
         ResetSingletonState();
 
         // Act - Second initialization
         GenericSingleton<TestObject>.Instance = testObject2;
-        var secondInstance = GenericSingleton<TestObject>.Instance;
+        TestObject secondInstance = GenericSingleton<TestObject>.Instance;
 
         // Assert
         Assert.That(firstInstance, Is.SameAs(testObject1));
@@ -215,7 +213,7 @@ public class TestGenericSingleton
 
         // Act
         GenericSingleton<TestObject>.SetFactory(factory);
-        var instance = GenericSingleton<TestObject>.Instance;
+        TestObject instance = GenericSingleton<TestObject>.Instance;
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -235,13 +233,13 @@ public class TestGenericSingleton
     public void Singleton_SetFactory_ShouldThrowExceptionWhenAlreadyInitialized()
     {
         // Arrange
-        var testObject = new TestObject { Id = 1, Name = "Test" };
+        TestObject testObject = new() { Id = 1, Name = "Test" };
         GenericSingleton<TestObject>.Instance = testObject;
 
         Func<TestObject> factory = () => new TestObject { Id = 2, Name = "Factory" };
 
         // Act & Assert
-        Assert.That(() => GenericSingleton<TestObject>.SetFactory(factory), 
+        Assert.That(() => GenericSingleton<TestObject>.SetFactory(factory),
             Throws.InvalidOperationException.With.Message.Contains("already set"));
     }
 
@@ -249,7 +247,7 @@ public class TestGenericSingleton
     public void Singleton_SetFactory_WithOverwrite_ShouldAllowOverwriting()
     {
         // Arrange
-        var testObject = new TestObject { Id = 1, Name = "Test" };
+        TestObject testObject = new() { Id = 1, Name = "Test" };
         GenericSingleton<TestObject>.Instance = testObject;
 
         var factoryCallCount = 0;
@@ -260,8 +258,8 @@ public class TestGenericSingleton
         };
 
         // Act
-        GenericSingleton<TestObject>.SetFactory(factory, overwrite: true);
-        var instance = GenericSingleton<TestObject>.Instance;
+        GenericSingleton<TestObject>.SetFactory(factory, true);
+        TestObject instance = GenericSingleton<TestObject>.Instance;
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -288,7 +286,7 @@ public class TestGenericSingleton
         Assert.That(factoryCallCount, Is.EqualTo(0), "Factory should not be called until instance is accessed");
 
         // Act - Now access the instance
-        var instance = GenericSingleton<TestObject>.Instance;
+        TestObject instance = GenericSingleton<TestObject>.Instance;
 
         // Assert - Factory should be called now
         Assert.That(factoryCallCount, Is.EqualTo(1), "Factory should be called when instance is accessed");
@@ -309,9 +307,9 @@ public class TestGenericSingleton
         GenericSingleton<TestObject>.SetFactory(factory);
 
         // Act
-        var instance1 = GenericSingleton<TestObject>.Instance;
-        var instance2 = GenericSingleton<TestObject>.Instance;
-        var instance3 = GenericSingleton<TestObject>.Instance;
+        TestObject instance1 = GenericSingleton<TestObject>.Instance;
+        TestObject instance2 = GenericSingleton<TestObject>.Instance;
+        TestObject instance3 = GenericSingleton<TestObject>.Instance;
 
         // Assert
         Assert.That(instance1, Is.SameAs(instance2));
@@ -335,20 +333,19 @@ public class TestGenericSingleton
         };
 
         GenericSingleton<TestObject>.SetFactory(factory);
-        var results = new System.Collections.Concurrent.ConcurrentBag<TestObject>();
+        ConcurrentBag<TestObject> results = new();
 
         // Act
-        Parallel.For(0, 10, _ =>
-        {
-            results.Add(GenericSingleton<TestObject>.Instance);
-        });
+        Parallel.For(0, 10, _ => { results.Add(GenericSingleton<TestObject>.Instance); });
 
         // Assert
-        var firstInstance = results.First();
+        TestObject firstInstance = results.First();
         Assert.That(firstInstance, Is.Not.Null);
         Assert.That(results.Count, Is.EqualTo(10), "Should have collected 10 instances");
-        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True, "All instances should be the same across threads");
-        Assert.That(factoryCallCount, Is.EqualTo(1), "Factory should be called exactly once even with concurrent access");
+        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True,
+            "All instances should be the same across threads");
+        Assert.That(factoryCallCount, Is.EqualTo(1),
+            "Factory should be called exactly once even with concurrent access");
     }
 
     [Test]
@@ -373,7 +370,7 @@ public class TestGenericSingleton
 
         // Act
         GenericSingleton<ComplexTestObject>.SetFactory(factory);
-        var instance = GenericSingleton<ComplexTestObject>.Instance;
+        ComplexTestObject instance = GenericSingleton<ComplexTestObject>.Instance;
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -388,13 +385,13 @@ public class TestGenericSingleton
     public void Singleton_SetFactory_AfterFromInstance_ShouldThrowException()
     {
         // Arrange
-        var testObject = new TestObject { Id = 1, Name = "Test" };
+        TestObject testObject = new() { Id = 1, Name = "Test" };
         GenericSingleton<TestObject>.FromInstance(testObject);
 
         Func<TestObject> factory = () => new TestObject { Id = 2, Name = "Factory" };
 
         // Act & Assert
-        Assert.That(() => GenericSingleton<TestObject>.SetFactory(factory), 
+        Assert.That(() => GenericSingleton<TestObject>.SetFactory(factory),
             Throws.InvalidOperationException.With.Message.Contains("already set"));
     }
 
@@ -402,7 +399,7 @@ public class TestGenericSingleton
     public void Singleton_SetFactory_AfterFromInstance_WithOverwrite_ShouldAllowOverwriting()
     {
         // Arrange
-        var testObject = new TestObject { Id = 1, Name = "Test" };
+        TestObject testObject = new() { Id = 1, Name = "Test" };
         GenericSingleton<TestObject>.FromInstance(testObject);
 
         var factoryCallCount = 0;
@@ -413,8 +410,8 @@ public class TestGenericSingleton
         };
 
         // Act
-        GenericSingleton<TestObject>.SetFactory(factory, overwrite: true);
-        var instance = GenericSingleton<TestObject>.Instance;
+        GenericSingleton<TestObject>.SetFactory(factory, true);
+        TestObject instance = GenericSingleton<TestObject>.Instance;
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -431,7 +428,7 @@ public class TestGenericSingleton
 
         // Act & Assert
         GenericSingleton<TestObject>.SetFactory(factory);
-        Assert.That(() => GenericSingleton<TestObject>.Instance, 
+        Assert.That(() => GenericSingleton<TestObject>.Instance,
             Throws.InvalidOperationException.With.Message.Contains("Factory error"));
     }
 
@@ -443,7 +440,7 @@ public class TestGenericSingleton
 
         // Act
         GenericSingleton<TestObject?>.SetFactory(factory);
-        var instance = GenericSingleton<TestObject?>.Instance;
+        TestObject? instance = GenericSingleton<TestObject?>.Instance;
 
         // Assert
         Assert.That(instance, Is.Null);
@@ -453,20 +450,20 @@ public class TestGenericSingleton
     private void ResetSingletonState()
     {
         // Use reflection to reset the private static field
-        var field = typeof(GenericSingleton<TestObject>).GetField("_instance", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field = typeof(GenericSingleton<TestObject>).GetField("_instance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field?.SetValue(null, null);
 
-        var field2 = typeof(GenericSingleton<TestObject2>).GetField("_instance", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field2 = typeof(GenericSingleton<TestObject2>).GetField("_instance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field2?.SetValue(null, null);
 
-        var field3 = typeof(GenericSingleton<ComplexTestObject>).GetField("_instance", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field3 = typeof(GenericSingleton<ComplexTestObject>).GetField("_instance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field3?.SetValue(null, null);
 
-        var field4 = typeof(GenericSingleton<TestObject?>).GetField("_instance", 
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        FieldInfo? field4 = typeof(GenericSingleton<TestObject?>).GetField("_instance",
+            BindingFlags.NonPublic | BindingFlags.Static);
         field4?.SetValue(null, null);
     }
 
@@ -489,4 +486,4 @@ public class TestGenericSingleton
         public string Name { get; set; } = string.Empty;
         public Dictionary<string, object> Properties { get; set; } = new();
     }
-} 
+}

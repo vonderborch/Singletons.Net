@@ -11,8 +11,8 @@
         <Configurations>Debug;Release</Configurations>
         <Platforms>AnyCPU</Platforms>
         <ApplicationIcon>..\..\..\logo.ico</ApplicationIcon>
-        <AssemblyVersion>1.0.0.12</AssemblyVersion>
-        <FileVersion>1.0.0.12</FileVersion>
+        <AssemblyVersion>1.1.0.3</AssemblyVersion>
+        <FileVersion>1.1.0.3</FileVersion>
     </PropertyGroup>
 
     <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -37,7 +37,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\source\Singletons.Net\Singletons.Net.csproj" />
+        <ProjectReference Include="..\..\..\source\Singletons.Net\Singletons.Net.csproj"/>
     </ItemGroup>
 
 </Project>

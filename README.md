@@ -10,7 +10,8 @@ A library containing a variety of Singleton approaches that can be leveraged.
 
 [![NuGet version (Singletons.Net)](https://img.shields.io/nuget/v/Singletons.Net.svg?style=flat-square)](https://www.nuget.org/packages/Singletons.Net/)
 
-The recommended installation approach is to use the available nuget package: [Singletons.Net](https://www.nuget.org/packages/Singletons.Net/)
+The recommended installation approach is to use the available nuget
+package: [Singletons.Net](https://www.nuget.org/packages/Singletons.Net/)
 
 ### Clone
 

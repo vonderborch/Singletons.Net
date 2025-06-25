@@ -1,5 +1,6 @@
-using System;
-using NUnit.Framework;
+using System.Collections;
+using System.Collections.Concurrent;
+using System.Reflection;
 using Singletons.Net.Specialized;
 
 namespace Singletons.Net.Test.Specialized;
@@ -21,8 +22,8 @@ public class TestMultiInstanceSingleton
         MultiInstanceSingleton<string, TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act
-        var instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
-        var instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -37,8 +38,8 @@ public class TestMultiInstanceSingleton
         MultiInstanceSingleton<string, TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act
-        var instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
-        var instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key2");
+        TestObject instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key2");
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -58,8 +59,8 @@ public class TestMultiInstanceSingleton
         };
 
         // Act
-        var instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory);
-        var instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory);
+        TestObject instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory);
+        TestObject instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory);
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -80,7 +81,7 @@ public class TestMultiInstanceSingleton
         };
 
         // Act
-        var instance = MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory);
+        TestObject instance = MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -99,30 +100,31 @@ public class TestMultiInstanceSingleton
             {
                 factoryCallCount++;
             }
+
             return new TestObject { Id = factoryCallCount, Name = $"Test-{factoryCallCount}" };
         };
 
-        var results = new System.Collections.Concurrent.ConcurrentBag<TestObject>();
+        ConcurrentBag<TestObject> results = new();
 
         // Act
-        System.Threading.Tasks.Parallel.For(0, 10, _ =>
-        {
-            results.Add(MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory));
-        });
+        Parallel.For(0, 10,
+            _ => { results.Add(MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory)); });
 
         // Assert
-        var firstInstance = results.First();
+        TestObject firstInstance = results.First();
         Assert.That(firstInstance, Is.Not.Null);
         Assert.That(results.Count, Is.EqualTo(10));
-        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True, "All instances should be the same across threads");
-        Assert.That(factoryCallCount, Is.EqualTo(1), "Factory should be called exactly once even with concurrent access");
+        Assert.That(results.All(x => ReferenceEquals(x, firstInstance)), Is.True,
+            "All instances should be the same across threads");
+        Assert.That(factoryCallCount, Is.EqualTo(1),
+            "Factory should be called exactly once even with concurrent access");
     }
 
     [Test]
     public void MultiInstanceSingleton_GetInstance_ShouldThrowExceptionWhenNoFactoryProvided()
     {
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() =>
             MultiInstanceSingleton<string, TestObject>.GetInstance("key1"));
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
@@ -144,7 +146,7 @@ public class TestMultiInstanceSingleton
         };
 
         // Act
-        var instance = MultiInstanceSingleton<string, ComplexTestObject>.GetInstance("key1", factory);
+        ComplexTestObject instance = MultiInstanceSingleton<string, ComplexTestObject>.GetInstance("key1", factory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -161,7 +163,7 @@ public class TestMultiInstanceSingleton
         Func<TestObject> factory = () => throw new InvalidOperationException("Factory exception");
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() =>
             MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory));
 
         Assert.That(exception.Message, Is.EqualTo("Factory exception"));
@@ -171,11 +173,12 @@ public class TestMultiInstanceSingleton
     public void MultiInstanceSingleton_GetInstance_ShouldWorkWithDefaultFactory()
     {
         // Arrange
-        MultiInstanceSingleton<string, TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Default Test" };
+        MultiInstanceSingleton<string, TestObject>.DefaultFactory =
+            () => new TestObject { Id = 1, Name = "Default Test" };
 
         // Act
-        var instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
-        var instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -189,12 +192,13 @@ public class TestMultiInstanceSingleton
     public void MultiInstanceSingleton_GetInstance_ShouldPreferProvidedFactoryOverDefaultFactory()
     {
         // Arrange
-        MultiInstanceSingleton<string, TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Default Test" };
+        MultiInstanceSingleton<string, TestObject>.DefaultFactory =
+            () => new TestObject { Id = 1, Name = "Default Test" };
 
         Func<TestObject> providedFactory = () => new TestObject { Id = 2, Name = "Provided Test" };
 
         // Act
-        var instance = MultiInstanceSingleton<string, TestObject>.GetInstance("key1", providedFactory);
+        TestObject instance = MultiInstanceSingleton<string, TestObject>.GetInstance("key1", providedFactory);
 
         // Assert
         Assert.That(instance, Is.Not.Null);
@@ -207,11 +211,11 @@ public class TestMultiInstanceSingleton
     {
         // Arrange
         MultiInstanceSingleton<string, TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
-        var instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
 
         // Act
         MultiInstanceSingleton<string, TestObject>.RemoveInstance("key1");
-        var instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -224,13 +228,13 @@ public class TestMultiInstanceSingleton
     {
         // Arrange
         MultiInstanceSingleton<string, TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
-        var instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
-        var instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key2");
+        TestObject instance1 = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance2 = MultiInstanceSingleton<string, TestObject>.GetInstance("key2");
 
         // Act
         MultiInstanceSingleton<string, TestObject>.RemoveInstance("key1");
-        var instance1AfterRemoval = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
-        var instance2AfterRemoval = MultiInstanceSingleton<string, TestObject>.GetInstance("key2");
+        TestObject instance1AfterRemoval = MultiInstanceSingleton<string, TestObject>.GetInstance("key1");
+        TestObject instance2AfterRemoval = MultiInstanceSingleton<string, TestObject>.GetInstance("key2");
 
         // Assert
         Assert.That(instance1, Is.Not.SameAs(instance1AfterRemoval), "Instance for key1 should be recreated");
@@ -244,9 +248,9 @@ public class TestMultiInstanceSingleton
         MultiInstanceSingleton<int, TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
         // Act
-        var instance1 = MultiInstanceSingleton<int, TestObject>.GetInstance(1);
-        var instance2 = MultiInstanceSingleton<int, TestObject>.GetInstance(2);
-        var instance3 = MultiInstanceSingleton<int, TestObject>.GetInstance(1);
+        TestObject instance1 = MultiInstanceSingleton<int, TestObject>.GetInstance(1);
+        TestObject instance2 = MultiInstanceSingleton<int, TestObject>.GetInstance(2);
+        TestObject instance3 = MultiInstanceSingleton<int, TestObject>.GetInstance(1);
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -270,7 +274,7 @@ public class TestMultiInstanceSingleton
         Func<TestObject>? factory = null;
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() =>
             MultiInstanceSingleton<string, TestObject>.GetInstance("key1", factory));
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
@@ -283,7 +287,7 @@ public class TestMultiInstanceSingleton
         MultiInstanceSingleton<string, TestObject>.DefaultFactory = null;
 
         // Act & Assert
-        var exception = Assert.Throws<InvalidOperationException>(() =>
+        InvalidOperationException? exception = Assert.Throws<InvalidOperationException>(() =>
             MultiInstanceSingleton<string, TestObject>.GetInstance("key1"));
 
         Assert.That(exception.Message, Is.EqualTo("No instance factory provided"));
@@ -295,13 +299,13 @@ public class TestMultiInstanceSingleton
         // Arrange
         MultiInstanceSingleton<ComplexKey, TestObject>.DefaultFactory = () => new TestObject { Id = 1, Name = "Test" };
 
-        var key1 = new ComplexKey { Id = 1, Name = "Key1" };
-        var key2 = new ComplexKey { Id = 2, Name = "Key2" };
+        ComplexKey key1 = new() { Id = 1, Name = "Key1" };
+        ComplexKey key2 = new() { Id = 2, Name = "Key2" };
 
         // Act
-        var instance1 = MultiInstanceSingleton<ComplexKey, TestObject>.GetInstance(key1);
-        var instance2 = MultiInstanceSingleton<ComplexKey, TestObject>.GetInstance(key2);
-        var instance3 = MultiInstanceSingleton<ComplexKey, TestObject>.GetInstance(key1);
+        TestObject instance1 = MultiInstanceSingleton<ComplexKey, TestObject>.GetInstance(key1);
+        TestObject instance2 = MultiInstanceSingleton<ComplexKey, TestObject>.GetInstance(key2);
+        TestObject instance3 = MultiInstanceSingleton<ComplexKey, TestObject>.GetInstance(key1);
 
         // Assert
         Assert.That(instance1, Is.Not.Null);
@@ -321,19 +325,20 @@ public class TestMultiInstanceSingleton
     private void ResetSingletonState()
     {
         // Use reflection to clear the private static dictionary for all type combinations used in the tests
-        var types = new[]
+        Type[] types = new[]
         {
             typeof(MultiInstanceSingleton<string, TestObject>),
             typeof(MultiInstanceSingleton<string, ComplexTestObject>),
             typeof(MultiInstanceSingleton<int, TestObject>),
             typeof(MultiInstanceSingleton<ComplexKey, TestObject>)
         };
-        foreach (var t in types)
+        foreach (Type t in types)
         {
-            var field = t.GetField("_instances", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-            var dict = field?.GetValue(null) as System.Collections.IDictionary;
+            FieldInfo? field = t.GetField("_instances", BindingFlags.NonPublic | BindingFlags.Static);
+            IDictionary? dict = field?.GetValue(null) as IDictionary;
             dict?.Clear();
-            var defaultFactoryProperty = t.GetProperty("DefaultFactory", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+            PropertyInfo? defaultFactoryProperty =
+                t.GetProperty("DefaultFactory", BindingFlags.Public | BindingFlags.Static);
             defaultFactoryProperty?.SetValue(null, null);
         }
     }
@@ -357,4 +362,4 @@ public class TestMultiInstanceSingleton
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
     }
-} 
+}
